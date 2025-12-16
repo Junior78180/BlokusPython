@@ -1,7 +1,7 @@
 class Plateau:
     def __init__(self, taille=10):
         self.taille_plateau = taille
-        self.plateau = [['⬜' for _ in range(taille)] for _ in range(taille)]
+        self.plateau = [['▪️' for _ in range(taille)] for _ in range(taille)]
 
     def afficher_tableau(self):
         print("Tableau actuel :")

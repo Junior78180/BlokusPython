@@ -1,3 +1,5 @@
+import random
+
 from piece import Piece
 
 COULEURS = {
@@ -51,7 +53,49 @@ class Joueur:
         self.couleur = couleur
         self.emoji = COULEURS[couleur] if emoji is None else emoji
         self.pieces = creer_pieces() if pieces is None else pieces
+        self.skip = False  # Si True, le joueur est exclu pour le reste de la partie
 
     def placer_piece_retirer_piece_inv(self, piece):
         if piece in self.pieces:
             self.pieces.remove(piece)
+
+    def a_un_coup_possible(self, plateau):
+        """Retourne True s'il existe au moins un placement possible pour une des pièces du joueur"""
+        for piece in self.pieces:
+            # parcourir toutes les positions du plateau
+            for x in range(plateau.taille_plateau):
+                for y in range(plateau.taille_plateau):
+                    if piece.peut_placer(plateau, (x, y)):
+                        return True
+        return False
+
+    def trouver_placement_possible(self, plateau):
+        """Renvoie (piece, (x,y)) pour le premier placement possible trouvé, ou None si aucun"""
+
+        pieces = self.pieces[:]
+        random.shuffle(pieces)  # Mélanger les pièces pour varier les placements
+
+        for piece in pieces:
+            piece_originale = piece
+
+            for miroir in [False, True]:
+                for rotation in range(4):
+                    piece_test = piece_originale.clone()
+
+                    if miroir:
+                        piece_test.miroir()
+
+                    for _ in range(rotation):
+                        piece_test.rotation_90()
+
+                    positions = [
+                        (x, y)
+                        for x in range(plateau.taille_plateau)
+                        for y in range(plateau.taille_plateau)
+                    ]
+                    random.shuffle(positions)  # Mélanger les positions pour varier les placements
+
+                    for pos in positions:
+                        if piece_test.peut_placer(plateau, pos):
+                            return piece_originale, pos
+        return None
