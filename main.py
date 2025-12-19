@@ -65,13 +65,16 @@ def afficher_interface(plateau, joueur, tour, piece_en_cours=None, position=None
 
 
 if __name__ == "__main__":
-    plateau = Plateau(5)
-    
+    plateau = Plateau(20)
+    couleurs = ["bleu", "jaune", "rouge", "vert"]
+    nb_joueurs = int(input("Nombre de joueurs (2 à 4) : "))
+
+    while nb_joueurs < 2 or nb_joueurs > 4:
+        nb_joueurs = int(input("Veuillez entrer un nombre valide entre 2 et 4 : "))
+
     joueurs = [
-        Joueur("Joueur 1 b", couleur='bleu'),
-        Joueur("Joueur 2 j", couleur='jaune'),
-        Joueur("Joueur 3 r", couleur='rouge'),
-        Joueur("Joueur 4 v", couleur='vert')
+        Joueur(f"Joueur {i + 1}", couleur=couleurs[i])
+        for i in range(nb_joueurs)
     ]
 
     tour = 1
