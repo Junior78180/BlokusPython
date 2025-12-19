@@ -65,7 +65,7 @@ class Joueur:
             # parcourir toutes les positions du plateau
             for x in range(plateau.taille_plateau):
                 for y in range(plateau.taille_plateau):
-                    if piece.peut_placer(plateau, (x, y)):
+                    if piece.peut_placer(plateau, (x, y), self.emoji):
                         return True
         return False
 
@@ -96,6 +96,6 @@ class Joueur:
                     random.shuffle(positions)  # Mélanger les positions pour varier les placements
 
                     for pos in positions:
-                        if piece_test.peut_placer(plateau, pos):
+                        if piece_test.peut_placer(plateau, pos, self.emoji):
                             return piece_originale, pos
         return None
