@@ -1,7 +1,14 @@
 import os
 import sys
 import platform
-import readchar # already installed
+import time
+
+# Force l'encodage UTF-8 pour la sortie standard pour supporter les caractères spéciaux (■)
+# Cela corrige l'erreur UnicodeEncodeError sur Windows
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8')
+
+import readchar
 from readchar import key
 
 
@@ -79,7 +86,7 @@ def afficher_interface(plateau, joueur, tour, joueurs_list, piece_en_cours=None,
 
 
 if __name__ == "__main__":
-    plateau = Plateau(20) 
+    plateau = Plateau(5)
     clear_screen()
     try:
         nb_joueurs_input = input("Nombre de joueurs (2 à 4) [defaut 2]: ")
@@ -108,7 +115,36 @@ if __name__ == "__main__":
         joueur = joueurs[joueur_idx]
 
         if joueur.skip:
-            au_tour_de += 1
+            if joueur_idx in actifs:
+                actifs.remove(joueur_idx)
+            if actifs and au_tour_de >= len(actifs):
+                au_tour_de = 0
+                tour += 1
+            continue
+
+        # Vérification automatique : Plus de pièces ou bloqué
+        bloque = False
+        raison = ""
+        if not joueur.pieces:
+            raison = f"{joueur.nom} a terminé (toutes les pièces posées) !"
+            bloque = True
+        elif not joueur.a_un_coup_possible(plateau):
+            raison = f"{joueur.nom} est bloqué et ne peut plus jouer !"
+            bloque = True
+        
+        if bloque:
+            print(f"\n" + "=" * 40)
+            print(f"INFO: {raison}")
+            print(f"=" * 40)
+            joueur.skip = True
+            if joueur_idx in actifs:
+                actifs.remove(joueur_idx)
+
+            time.sleep(2)
+            
+            if actifs and au_tour_de >= len(actifs):
+                au_tour_de = 0
+                tour += 1
             continue
 
         tour_termine = False
@@ -118,16 +154,8 @@ if __name__ == "__main__":
             afficher_interface(plateau, joueur, tour, joueurs, message=msg)
             msg = "" 
 
-            print(f"\nTour de {joueur.nom}: Choisissez une pièce (numéro) ou 's' pour abandonner (plus de case dispo)")
+            print(f"\nTour de {joueur.nom}: Choisissez une pièce (tapez le numéro et Entrée)")
             choix = input("> ")
-
-            if choix.lower() == 's':
-                joueur.skip = True
-                if joueur_idx in actifs:
-                    actifs.remove(joueur_idx)
-                msg = f"{joueur.nom} passe son tour et est exclu."
-                tour_termine = True
-                continue
 
             try:
                 choix_piece_idx = int(choix)
@@ -148,25 +176,25 @@ if __name__ == "__main__":
                 msg = "" 
                 
                 print(f"Pièce: {piece_a_manipuler.nom} | Position: ({x}, {y})")
-                print("Flèches: déplacer | r: pivoter | m: miroir | Entrée: valider | c: changer pièce")
+                print("Flèches ou ZQSD: déplacer | r: pivoter | m: miroir | Entrée: valider | c: changer pièce")
 
                 k = readchar.readkey()
 
-                if k in (key.UP, 'z'):
+                if k in (key.UP, 'z', 'Z'):
                     x = max(0, x - 1)
-                elif k in (key.DOWN, 's'):
+                elif k in (key.DOWN, 's', 'S'):
                     x = min(plateau.taille_plateau - 1, x + 1)
-                elif k in (key.LEFT, 'q'):
+                elif k in (key.LEFT, 'q', 'Q'):
                     y = max(0, y - 1)
-                elif k in (key.RIGHT, 'd'):
+                elif k in (key.RIGHT, 'd', 'D'):
                     y = min(plateau.taille_plateau - 1, y + 1)
-                elif k == 'r':
+                elif k in ('r', 'R'):
                     piece_a_manipuler.rotation_90()
-                elif k == 'm':
+                elif k in ('m', 'M'):
                     piece_a_manipuler.miroir()
-                elif k == 'c':
+                elif k in ('c', 'C'):
                     break 
-                elif k == key.ENTER:
+                elif k == key.ENTER or k == '\r' or k == '\n':
                     if piece_a_manipuler.placer_piece(plateau, (x, y), joueur.emoji):
                         joueur.placer_piece_retirer_piece_inv(piece_originale)
                         msg = f"Pièce placée en ({x}, {y})."
@@ -175,11 +203,19 @@ if __name__ == "__main__":
                     else:
                         msg = "Placement invalide (règles Blokus non respectées)."
             
-        au_tour_de += 1
-        if actifs and au_tour_de >= len(actifs):
-            au_tour_de = 0
-            tour += 1
-        elif not actifs:
+        # Gestion de fin de tour
+        if joueur.skip:
+            # Si le joueur a été exclu, on n'incrémente pas au_tour_de (car décalage de liste)
+            if actifs and au_tour_de >= len(actifs):
+                au_tour_de = 0
+                tour += 1
+        else:
+            au_tour_de += 1
+            if actifs and au_tour_de >= len(actifs):
+                au_tour_de = 0
+                tour += 1
+        
+        if not actifs:
             break
 
     clear_screen()

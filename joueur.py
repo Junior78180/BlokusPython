@@ -19,29 +19,29 @@ def creer_pieces():
         Piece([[1, 1]], "I2"),
 
         # Three blocks
-        Piece([[1, 1, 1]], "I3"),
-        Piece([[1, 1], [1, 0]], "Coin3"),
+        #Piece([[1, 1, 1]], "I3"),
+        #Piece([[1, 1], [1, 0]], "Coin3"),
 
         # Four blocks
-        Piece([[1, 1, 1, 1]], "I4"),
-        Piece([[1, 0, 0], [1, 1, 1]], "L4"),
-        Piece([[1, 1, 1], [0, 1, 0]], "T4"),
-        Piece([[1, 1], [1, 1]], "Carré4"),
-        Piece([[0, 1], [1, 1], [1, 0]], "Z4"),
+        #Piece([[1, 1, 1, 1]], "I4"),
+        #Piece([[1, 0, 0], [1, 1, 1]], "L4"),
+        #Piece([[1, 1, 1], [0, 1, 0]], "T4"),
+        #Piece([[1, 1], [1, 1]], "Carré4"),
+        #Piece([[0, 1], [1, 1], [1, 0]], "Z4"),
 
         # Five blocks
-        Piece([[1, 1, 1, 1, 1]], "I5"),
-        Piece([[1, 0, 0, 0], [1, 1, 1, 1]], "L5"),
-        Piece([[1, 1, 0], [1, 1, 1]], "d5"),
-        Piece([[1, 0, 1], [1, 1, 1]], "U5"),
-        Piece([[1, 1, 1, 1], [0, 0, 1, 0]], "Y5"),
-        Piece([[1, 0, 0], [1, 1, 1], [1, 0, 0]], "T5"),
-        Piece([[1, 1, 1], [1, 0, 0], [1, 0, 0]], "GrandL5"),
-        Piece([[0, 0, 1, 1], [1, 1, 1, 0]], "PetitZ5"),
-        Piece([[0, 0, 1], [0, 1, 1], [1, 1, 0]], "W5"),
-        Piece([[0, 1, 1], [0, 1, 0], [1, 1, 0]], "Z5"),
-        Piece([[0, 1, 1], [1, 1, 0], [0, 1, 0]], "ZX5"),
-        Piece([[0, 1, 0], [1, 1, 1], [0, 1, 0]], "X5")
+        #Piece([[1, 1, 1, 1, 1]], "I5"),
+        #Piece([[1, 0, 0, 0], [1, 1, 1, 1]], "L5"),
+        #Piece([[1, 1, 0], [1, 1, 1]], "d5"),
+        #Piece([[1, 0, 1], [1, 1, 1]], "U5"),
+        #Piece([[1, 1, 1, 1], [0, 0, 1, 0]], "Y5"),
+        #Piece([[1, 0, 0], [1, 1, 1], [1, 0, 0]], "T5"),
+        #Piece([[1, 1, 1], [1, 0, 0], [1, 0, 0]], "GrandL5"),
+        #Piece([[0, 0, 1, 1], [1, 1, 1, 0]], "PetitZ5"),
+        #Piece([[0, 0, 1], [0, 1, 1], [1, 1, 0]], "W5"),
+        #Piece([[0, 1, 1], [0, 1, 0], [1, 1, 0]], "Z5"),
+        #Piece([[0, 1, 1], [1, 1, 0], [0, 1, 0]], "ZX5"),
+        #Piece([[0, 1, 0], [1, 1, 1], [0, 1, 0]], "X5")
     ]
 
 
@@ -67,18 +67,30 @@ class Joueur:
             # Bonus si toutes les pièces sont posées
             if not self.pieces:
                 self.score += 15
-                # Petit bonus supplémentaire si la dernière pièce était le I1 (carré 1)
-                if points_piece == 1:
-                    self.score += 5
 
     def a_un_coup_possible(self, plateau):
         """Retourne True s'il existe au moins un placement possible pour une des pièces du joueur"""
         for piece in self.pieces:
-            # parcourir toutes les positions du plateau
-            for x in range(plateau.taille_plateau):
-                for y in range(plateau.taille_plateau):
-                    if piece.peut_placer(plateau, (x, y), self.emoji):
-                        return True
+            # On doit tester toutes les orientations possibles (rotations + miroir)
+            piece_base = piece.clone()
+            
+            # 2 états de miroir : Normal, Miroir
+            for miroir in [False, True]:
+                p_miroir = piece_base.clone()
+                if miroir:
+                    p_miroir.miroir()
+                
+                # 4 rotations
+                for rotation in range(4):
+                    p_test = p_miroir.clone()
+                    for _ in range(rotation):
+                        p_test.rotation_90()
+                    
+                    # parcourir toutes les positions du plateau
+                    for x in range(plateau.taille_plateau):
+                        for y in range(plateau.taille_plateau):
+                            if p_test.peut_placer(plateau, (x, y), self.emoji):
+                                return True
         return False
 
     def trouver_placement_possible(self, plateau):
