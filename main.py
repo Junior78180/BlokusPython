@@ -15,10 +15,16 @@ def clear_screen():
     else:
         os.system('clear')
 
-def afficher_interface(plateau, joueur, tour, piece_en_cours=None, position=None, message=""):
-    """Affiche le plateau et la liste des pièces côte à côte."""
+def afficher_interface(plateau, joueur, tour, joueurs_list, piece_en_cours=None, position=None, message=""):
+    """Affiche le plateau, la liste des pièces et les scores."""
     clear_screen()
-    print(f"--- Tour {tour} : {joueur.nom} ({joueur.emoji}) ---\n")
+    
+    # En-tête avec les scores
+    header = f"--- Tour {tour} : {joueur.nom} ({joueur.emoji}) ---\n"
+    scores_str = " | ".join([f"{j.nom}: {j.score}pts" for j in joueurs_list])
+    print(header)
+    print(f"Scores actuels : {scores_str}")
+    print("-" * 60)
 
     # 1. Préparation des lignes du plateau
     display_grid = [row[:] for row in plateau.plateau]
@@ -33,8 +39,10 @@ def afficher_interface(plateau, joueur, tour, piece_en_cours=None, position=None
                 if val:
                     x, y = x_pos + r, y_pos + c
                     if 0 <= x < plateau.taille_plateau and 0 <= y < plateau.taille_plateau:
-                        if display_grid[x][y] == '▪️':
+                        if plateau.plateau[x][y] == '\033[29m■\033[0m':
                             display_grid[x][y] = ghost_symbol
+                        elif not symbole_valide:
+                             display_grid[x][y] = ghost_symbol
 
     board_lines = ["Plateau de jeu :"]
     for row in display_grid:
@@ -42,22 +50,28 @@ def afficher_interface(plateau, joueur, tour, piece_en_cours=None, position=None
     
     # 2. Préparation des lignes de la liste des pièces
     pieces_lines = ["Pièces disponibles :"]
-    for i, p in enumerate(joueur.pieces):
-        pieces_lines.append(f"{i}: {p.nom}")
+    # On ajoute une ligne vide pour l'espacement si voulu, mais en tant qu'élément de liste
+    pieces_lines.append("") 
+    
+    for i in range(0, len(joueur.pieces), 2):
+        p1 = joueur.pieces[i]
+        line_content = f"{i}: {p1.nom}"
+        if i + 1 < len(joueur.pieces):
+            p2 = joueur.pieces[i+1]
+            line_content = f"{line_content:<20} {i+1}: {p2.nom}"
+        pieces_lines.append(f"{' ' * 5} {line_content}")
         
-    # 3. Affichage côte à côte
+    # 3. Affichage côte à côte (2 colonnes)
     max_lines = max(len(board_lines), len(pieces_lines))
     
     # Remplissage avec des lignes vides pour égaliser la hauteur
     board_lines += [""] * (max_lines - len(board_lines))
     pieces_lines += [""] * (max_lines - len(pieces_lines))
 
-    col_width = 35 
     
     for b_line, p_line in zip(board_lines, pieces_lines):
-        # On utilise une tabulation pour séparer visuellement, c'est souvent plus robuste avec les emojis
-        print(f"{b_line} \t {p_line}")
-
+        print(f"{b_line}\t{p_line}")
+        
     print("\n" + "="*40)
     if message:
         print(f"INFO: {message}")
@@ -65,17 +79,22 @@ def afficher_interface(plateau, joueur, tour, piece_en_cours=None, position=None
 
 
 if __name__ == "__main__":
-    plateau = Plateau(20)
-    couleurs = ["bleu", "jaune", "rouge", "vert"]
-    nb_joueurs = int(input("Nombre de joueurs (2 à 4) : "))
+    plateau = Plateau(20) 
+    clear_screen()
+    try:
+        nb_joueurs_input = input("Nombre de joueurs (2 à 4) [defaut 2]: ")
+        nb_joueurs = int(nb_joueurs_input) if nb_joueurs_input.strip() else 2
+    except ValueError:
+        nb_joueurs = 2
 
-    while nb_joueurs < 2 or nb_joueurs > 4:
-        nb_joueurs = int(input("Veuillez entrer un nombre valide entre 2 et 4 : "))
+    if nb_joueurs < 2: nb_joueurs = 2
+    if nb_joueurs > 4: nb_joueurs = 4
 
-    joueurs = [
-        Joueur(f"Joueur {i + 1}", couleur=couleurs[i])
-        for i in range(nb_joueurs)
-    ]
+    couleurs_dispo = [('bleu', 'Joueur 1'), ('jaune', 'Joueur 2'), ('rouge', 'Joueur 3'), ('vert', 'Joueur 4')]
+    joueurs = []
+    for i in range(nb_joueurs):
+        c, nom_defaut = couleurs_dispo[i]
+        joueurs.append(Joueur(nom_defaut, couleur=c))
 
     tour = 1
     au_tour_de = 0
@@ -89,49 +108,47 @@ if __name__ == "__main__":
         joueur = joueurs[joueur_idx]
 
         if joueur.skip:
-            print(f"{joueur.nom} a passé son tour et est exclu")
             au_tour_de += 1
             continue
 
         tour_termine = False
-        msg = "" # Message à afficher en bas de l'interface
+        msg = "" 
 
         while not tour_termine:
-            # Affichage de l'interface de sélection
-            afficher_interface(plateau, joueur, tour, message=msg)
-            msg = "" # Reset du message après affichage
+            afficher_interface(plateau, joueur, tour, joueurs, message=msg)
+            msg = "" 
 
-            choix = input(f"\nTour de {joueur.nom}: Choisissez une pièce (numéro), ou 's' pour passer: ")
+            print(f"\nTour de {joueur.nom}: Choisissez une pièce (numéro) ou 's' pour abandonner (plus de case dispo)")
+            choix = input("> ")
 
             if choix.lower() == 's':
                 joueur.skip = True
                 if joueur_idx in actifs:
                     actifs.remove(joueur_idx)
-                msg = f"{joueur.nom} passe son tour et est exclu"
+                msg = f"{joueur.nom} passe son tour et est exclu."
                 tour_termine = True
                 continue
 
             try:
                 choix_piece_idx = int(choix)
+                if not (0 <= choix_piece_idx < len(joueur.pieces)):
+                    raise ValueError
                 piece_originale = joueur.pieces[choix_piece_idx]
                 piece_a_manipuler = piece_originale.clone()
             except (ValueError, IndexError):
-                msg = "Entrée invalide, Veuillez choisir un numéro de pièce valide"
+                msg = "Numéro de pièce invalide."
                 continue
 
-            # Boucle de manipulation de la pièce avec les flèches
+            # Boucle de manipulation
             x, y = 0, 0
             placement_reussi = False
             
-            # On centre la pièce au début si possible
-            # x, y = 0, 0 est le coin haut gauche par défaut
-
             while not placement_reussi:
-                afficher_interface(plateau, joueur, tour, piece_a_manipuler, (x, y), message=msg)
-                msg = "" # Reset message
+                afficher_interface(plateau, joueur, tour, joueurs, piece_a_manipuler, (x, y), message=msg)
+                msg = "" 
                 
                 print(f"Pièce: {piece_a_manipuler.nom} | Position: ({x}, {y})")
-                print("Commandes: [Flèches] déplacer | [r] pivoter | [Entrée] placer | [c] retour choix")
+                print("Flèches: déplacer | r: pivoter | m: miroir | Entrée: valider | c: changer pièce")
 
                 k = readchar.readkey()
 
@@ -145,25 +162,44 @@ if __name__ == "__main__":
                     y = min(plateau.taille_plateau - 1, y + 1)
                 elif k == 'r':
                     piece_a_manipuler.rotation_90()
+                elif k == 'm':
+                    piece_a_manipuler.miroir()
                 elif k == 'c':
-                    break  # Retourne à la sélection de pièce
+                    break 
                 elif k == key.ENTER:
                     if piece_a_manipuler.placer_piece(plateau, (x, y), joueur.emoji):
                         joueur.placer_piece_retirer_piece_inv(piece_originale)
-                        msg = f"Pièce {piece_a_manipuler.nom} placée en ({x}, {y})"
+                        msg = f"Pièce placée en ({x}, {y})."
                         placement_reussi = True
                         tour_termine = True
                     else:
-                        msg = "Placement impossible ! Vérifiez les règles (coins, arêtes, limites)"
+                        msg = "Placement invalide (règles Blokus non respectées)."
             
         au_tour_de += 1
-        if au_tour_de >= len(actifs):
+        if actifs and au_tour_de >= len(actifs):
             au_tour_de = 0
             tour += 1
+        elif not actifs:
+            break
 
     clear_screen()
-    # Affichage final
+    print("="*40)
+    print("FIN DE LA PARTIE")
+    print("="*40)
     print("Plateau final :")
     for row in plateau.plateau:
         print(" ".join(row))
-    print("\nFin de la partie")
+    
+    print("\n--- CLASSEMENT FINAL ---")
+    joueurs_tries = sorted(joueurs, key=lambda j: j.score, reverse=True)
+    
+    for i, j in enumerate(joueurs_tries):
+        print(f"{i+1}. {j.nom} : {j.score} points")
+
+    if joueurs_tries[0].score == joueurs_tries[1].score:
+        # Si 2 membres on le même nombre alors 3 est compris dedans aussi
+        gagnant = None
+        print(f"\n🏆 Égalité {joueurs_tries[0].score} points ! 🏆")
+    else:
+        gagnant = joueurs_tries[0]
+        print(f"\n🏆 Le gagnant est {gagnant.nom} avec {gagnant.score} points ! 🏆")

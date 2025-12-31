@@ -3,10 +3,10 @@ import random
 from piece import Piece
 
 COULEURS = {
-    'bleu': '🔵',
-    'jaune': '😑',
-    'rouge': '🔴',
-    'vert': '💚'
+    'bleu': '\033[34m■\033[0m',
+    'jaune': '\033[33m■\033[0m',
+    'rouge': '\033[31m■\033[0m',
+    'vert': '\033[32m■\033[0m'
 }
 
 
@@ -34,9 +34,10 @@ def creer_pieces():
         Piece([[1, 0, 0, 0], [1, 1, 1, 1]], "L5"),
         Piece([[1, 1, 0], [1, 1, 1]], "d5"),
         Piece([[1, 0, 1], [1, 1, 1]], "U5"),
-        Piece([[1, 1, 1, 1], [0, 0, 1, 0]], "F5"),
+        Piece([[1, 1, 1, 1], [0, 0, 1, 0]], "Y5"),
         Piece([[1, 0, 0], [1, 1, 1], [1, 0, 0]], "T5"),
         Piece([[1, 1, 1], [1, 0, 0], [1, 0, 0]], "GrandL5"),
+        Piece([[0, 0, 1, 1], [1, 1, 1, 0]], "PetitZ5"),
         Piece([[0, 0, 1], [0, 1, 1], [1, 1, 0]], "W5"),
         Piece([[0, 1, 1], [0, 1, 0], [1, 1, 0]], "Z5"),
         Piece([[0, 1, 1], [1, 1, 0], [0, 1, 0]], "ZX5"),
@@ -54,10 +55,21 @@ class Joueur:
         self.emoji = COULEURS[couleur] if emoji is None else emoji
         self.pieces = creer_pieces() if pieces is None else pieces
         self.skip = False  # Si True, le joueur est exclu pour le reste de la partie
+        self.score = 0
 
     def placer_piece_retirer_piece_inv(self, piece):
         if piece in self.pieces:
+            # Calcul des points de la pièce posée (nombre de carrés)
+            points_piece = sum(sum(row) for row in piece.forme)
+            self.score += points_piece
             self.pieces.remove(piece)
+            
+            # Bonus si toutes les pièces sont posées
+            if not self.pieces:
+                self.score += 15
+                # Petit bonus supplémentaire si la dernière pièce était le I1 (carré 1)
+                if points_piece == 1:
+                    self.score += 5
 
     def a_un_coup_possible(self, plateau):
         """Retourne True s'il existe au moins un placement possible pour une des pièces du joueur"""

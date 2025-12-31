@@ -30,7 +30,7 @@ class Piece:
                     y = y_pos + c
                     if not (0 <= x < taille and 0 <= y < taille):
                         return False  # Hors du plateau
-                    if grille[x][y] != '▪️':
+                    if grille[x][y] != '\033[29m■\033[0m':
                         return False  # Case déjà occupée
                     coords_piece.append((x, y))
 
@@ -76,7 +76,7 @@ class Piece:
 
         grille = plateau.plateau
         x_pos, y_pos = position
-        symbole_util = emoji if emoji is not None else '▪️'
+        symbole_util = emoji if emoji is not None else '\033[29m■\033[0m'
         for r, row in enumerate(self.forme):
             for c, val in enumerate(row):
                 if val:
