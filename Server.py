@@ -37,7 +37,7 @@ class BlokusServer:
         self.port = port
         self.clients = {} # writer -> player_index
         self.writers = []
-        self.plateau = Plateau(5)
+        self.plateau = Plateau(20)
         self.joueurs = []
         self.colors_available = [('bleu', 'Joueur 1'), ('jaune', 'Joueur 2'), ('rouge', 'Joueur 3'), ('vert', 'Joueur 4')]
         self.game_started = False
