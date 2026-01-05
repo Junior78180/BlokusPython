@@ -86,7 +86,7 @@ def afficher_interface(plateau, joueur, tour, joueurs_list, piece_en_cours=None,
 
 
 if __name__ == "__main__":
-    plateau = Plateau(5)
+    plateau = Plateau(20)
     clear_screen()
     try:
         nb_joueurs_input = input("Nombre de joueurs (2 à 4) [defaut 2]: ")

@@ -93,6 +93,11 @@ class BlokusClient:
             joueurs_tries = sorted(joueurs, key=lambda j: j["score"], reverse=True)
             for i, j in enumerate(joueurs_tries):
                 print(f"{i+1}. {j['nom']} : {j['score']} points")
+            print("=" * 40 + "\n")
+            if joueurs_tries[0]['score'] != joueurs_tries[1]['score']:
+                print(f"Le gagnant est {joueurs_tries[0]['nom']} avec {joueurs_tries[0]['score']} points ! \nFélicitations !")
+            else : print(f"Égalité entre les joueurs !")
+            print("\n", "=" * 40)
             self.running = False
 
     def render_interface(self, piece_en_cours=None, position=None, message=""):
