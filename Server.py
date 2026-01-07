@@ -1,21 +1,31 @@
 import asyncio
 import json
-import sys
 import os
 import platform
+import sys
 
 # Ensure we can import from current directory
 sys.path.append('.')
 
 from plateau import Plateau
-from joueur import Joueur, COULEURS
-from piece import Piece
+from Joueur import Joueur
+
 
 # Helper to serialize/deserialize
 def piece_to_dict(p):
+    """
+    converts a piece to a dictionary
+    :param p:
+    :return: forme et nom de la piece
+    """
     return {"forme": p.forme, "nom": p.nom}
 
 def joueur_to_dict(j):
+    """
+    converts a player to a dictionary to send to client
+    :param j:
+    :return: nom, couleur, emoji, score, pieces, skip du joueur
+    """
     return {
         "nom": j.nom,
         "couleur": j.couleur,
@@ -26,12 +36,16 @@ def joueur_to_dict(j):
     }
 
 def clear_screen():
+    """Efface le contenu du terminal"""
     if platform.system() == "Windows":
         os.system('cls')
     else:
         os.system('clear')
 
 class BlokusServer:
+    """
+    Class Blokus Server
+    """
     def __init__(self, host='127.0.0.1', port=8888):
         self.host = host
         self.port = port
@@ -46,6 +60,11 @@ class BlokusServer:
         self.logs = []
 
     def log(self, message):
+        """
+        Affiche un message dans la console du serveur
+        :param message:
+        :return: le message
+        """
         self.logs.append(message)
         if len(self.logs) > 8:
             self.logs.pop(0)
@@ -56,6 +75,10 @@ class BlokusServer:
             print(message)
 
     def render_game(self):
+        """
+        Permet l'affichage de l'interface du serveur
+        :return:
+        """
         clear_screen()
         print("=== SERVEUR BLOKUS - PARTIE EN COURS ===")
         
@@ -80,6 +103,11 @@ class BlokusServer:
             print(f"> {l}")
 
     async def broadcast(self, message):
+        """
+        Envoie un message à tous les clients connectés
+        :param message:
+        :return: le message
+        """
         # Log info messages to server console
         if isinstance(message, dict) and message.get("type") == "info":
             self.log(message["message"])
@@ -92,6 +120,12 @@ class BlokusServer:
                 pass
 
     async def send_to(self, writer, message):
+        """
+        Envoie un message à un client spécifique
+        :param writer:
+        :param message:
+        :return: le message
+        """
         try:
             writer.write((json.dumps(message) + "\n").encode())
             await writer.drain()
@@ -99,6 +133,12 @@ class BlokusServer:
             pass
 
     async def handle_client(self, reader, writer):
+        """
+        Gère la connexion d'un client
+        :param reader:
+        :param writer:
+        :return:
+        """
         addr = writer.get_extra_info('peername')
         self.log(f"Connexion de {addr}")
 
@@ -164,6 +204,10 @@ class BlokusServer:
             writer.close()
 
     async def start_game(self):
+        """
+        Démarre la partie
+        :return:
+        """
         async with self.lock:
             if self.game_started: return
             self.game_started = True
@@ -174,6 +218,10 @@ class BlokusServer:
         await self.send_game_state()
 
     async def send_game_state(self):
+        """
+        Envoie l'état de la partie au client
+        :return:
+        """
         state = {
             "type": "state",
             "plateau": self.plateau.plateau,
@@ -185,6 +233,12 @@ class BlokusServer:
         self.render_game()
 
     async def process_move(self, writer, msg):
+        """
+        Effectue le mouvement envoyé par le client
+        :param writer:
+        :param msg:
+        :return:
+        """
         player_idx = self.clients[writer]
         if player_idx != self.current_player_idx:
             await self.send_to(writer, {"type": "error", "message": "Ce n'est pas votre tour"})
@@ -241,6 +295,10 @@ class BlokusServer:
             await self.send_to(writer, {"type": "error", "message": "Placement invalide (règles Blokus)"})
 
     async def next_turn(self):
+        """
+        Passe au joueur suivant
+        :return:
+        """
         active_players = [j for j in self.joueurs if not j.skip and j.pieces]
         
         if not active_players:
@@ -275,6 +333,10 @@ class BlokusServer:
         await self.send_game_state()
 
     async def start(self):
+        """
+        Démarre le serveur
+        :return:
+        """
         server = await asyncio.start_server(self.handle_client, self.host, self.port)
         self.log(f"Serveur démarré sur {self.host}:{self.port}")
         async with server:

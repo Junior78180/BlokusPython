@@ -7,7 +7,7 @@ class Piece:
         self.nom = nom
 
     def peut_placer(self, plateau, position, joueur_emoji):
-        """Vérifie si la pièce peut être placée selon les règles de Blokus.
+        """Vérifie si la pièce peut être placée selon les règles du Blokus.
         
         Règles :
         1. La pièce doit être dans les limites et sur des cases libres.
@@ -42,7 +42,7 @@ class Piece:
         for px, py in coords_piece:
             # 2. Vérifier les arêtes (Haut, Bas, Gauche, Droite)
             # Si une arête touche une case de la même couleur -> INTERDIT
-            voisins_aretes = [(-1, 0), (1, 0), (0, -1), (0, 1)]
+            voisins_aretes = [(-1, 0), (1, 0), (0, -1), (0, 1)] # Haut, Bas, Gauche, Droite
             for dx, dy in voisins_aretes:
                 nx, ny = px + dx, py + dy
                 if 0 <= nx < taille and 0 <= ny < taille:
@@ -87,9 +87,11 @@ class Piece:
         return True
 
     def rotation_90(self):
+        # Inverse la liste et transpose
         self.forme = [list(row) for row in zip(*self.forme[::-1])]
 
     def miroir(self):
+        # Inverse la liste
         self.forme = [row[::-1] for row in self.forme]
 
     def clone(self):

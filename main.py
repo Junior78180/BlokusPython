@@ -12,7 +12,7 @@ import readchar
 from readchar import key
 
 
-from joueur import Joueur
+from Joueur import Joueur
 from plateau import Plateau
 
 def clear_screen():
@@ -22,8 +22,26 @@ def clear_screen():
     else:
         os.system('clear')
 
+def get_piece_lines(index, piece):
+    """Génère les lignes de texte pour afficher une pièce (nom + forme)"""
+    shape_lines = []
+    for row in piece.forme:
+        line = "".join([joueur.emoji + " " if cell else "  " for cell in row])
+        shape_lines.append(line)
+    
+    header = f"{index}: {piece.nom}"
+    lines = []
+    
+    if shape_lines:
+        lines.append(f"{header:<14} {shape_lines[0]}")
+        for sl in shape_lines[1:]:
+            lines.append(f"{' ' * 14} {sl}")
+    else:
+        lines.append(header)
+    return lines
+
 def afficher_interface(plateau, joueur, tour, joueurs_list, piece_en_cours=None, position=None, message=""):
-    """Affiche le plateau, la liste des pièces et les scores."""
+    """Affiche le plateau, la liste des pièces et les scores"""
     clear_screen()
     
     # En-tête avec les scores
@@ -56,19 +74,38 @@ def afficher_interface(plateau, joueur, tour, joueurs_list, piece_en_cours=None,
         board_lines.append(" ".join(row))
     
     # 2. Préparation des lignes de la liste des pièces
-    pieces_lines = ["Pièces disponibles :"]
-    # On ajoute une ligne vide pour l'espacement si voulu, mais en tant qu'élément de liste
-    pieces_lines.append("") 
-    
-    for i in range(0, len(joueur.pieces), 2):
-        p1 = joueur.pieces[i]
-        line_content = f"{i}: {p1.nom}"
-        if i + 1 < len(joueur.pieces):
-            p2 = joueur.pieces[i+1]
-            line_content = f"{line_content:<20} {i+1}: {p2.nom}"
-        pieces_lines.append(f"{' ' * 5} {line_content}")
+    pieces_lines = ["Pièces disponibles :", ""]
+
+    # Configuration de l'affichage en colonnes
+    cols = 5  # Nombre de colonnes de pièces
+    col_width = 20 # Largeur d'une colonne
+
+    for i in range(0, len(joueur.pieces), cols):
+        batch = []
+        for j in range(cols):
+            if i + j < len(joueur.pieces):
+                batch.append((i+j, joueur.pieces[i+j]))
         
-    # 3. Affichage côte à côte (2 colonnes)
+        batch_lines = [get_piece_lines(idx, p) for idx, p in batch]
+        
+        if not batch_lines:
+            continue
+            
+        max_h = max(len(lines) for lines in batch_lines)
+        
+        # Harmonisation de la hauteur
+        for lines in batch_lines:
+            lines += [""] * (max_h - len(lines))
+            
+        # Construction des lignes
+        for r in range(max_h):
+            row_str = " " * 3
+            for lines in batch_lines:
+                row_str += f"{lines[r]:<{col_width}}"
+            pieces_lines.append(row_str) # end of line
+        pieces_lines.append("")
+        
+    # 3. Affichage côte à côte (2 colonnes principales : Plateau | Pièces)
     max_lines = max(len(board_lines), len(pieces_lines))
     
     # Remplissage avec des lignes vides pour égaliser la hauteur
@@ -86,6 +123,7 @@ def afficher_interface(plateau, joueur, tour, joueurs_list, piece_en_cours=None,
 
 
 if __name__ == "__main__":
+    # Création du plateau 20 par 20 et demande le nombre de joueurs
     plateau = Plateau(20)
     clear_screen()
     try:
@@ -94,26 +132,32 @@ if __name__ == "__main__":
     except ValueError:
         nb_joueurs = 2
 
+    # Vérification du nombre de joueurs
     if nb_joueurs < 2: nb_joueurs = 2
     if nb_joueurs > 4: nb_joueurs = 4
 
+    # Création des joueurs
     couleurs_dispo = [('bleu', 'Joueur 1'), ('jaune', 'Joueur 2'), ('rouge', 'Joueur 3'), ('vert', 'Joueur 4')]
     joueurs = []
     for i in range(nb_joueurs):
         c, nom_defaut = couleurs_dispo[i]
         joueurs.append(Joueur(nom_defaut, couleur=c))
 
+    # Initialisation des variables du jeu
     tour = 1
     au_tour_de = 0
     actifs = list(range(len(joueurs)))
 
+    # Boucle principale : Continue tant que les joueurs peuvent placer des pièces
     while tour < 100 and actifs:
         if not actifs:
             break
 
+        # Gestion du tour du joueur actuel
         joueur_idx = actifs[au_tour_de % len(actifs)]
         joueur = joueurs[joueur_idx]
 
+        # Vérification des joueurs qui ne peuvent plus jouer
         if joueur.skip:
             if joueur_idx in actifs:
                 actifs.remove(joueur_idx)
@@ -122,7 +166,7 @@ if __name__ == "__main__":
                 tour += 1
             continue
 
-        # Vérification automatique : Plus de pièces ou bloqué
+        # Changement état du joueur s'il n'a plus de pièces ou est bloqué
         bloque = False
         raison = ""
         if not joueur.pieces:
@@ -233,7 +277,7 @@ if __name__ == "__main__":
         print(f"{i+1}. {j.nom} : {j.score} points")
 
     if joueurs_tries[0].score == joueurs_tries[1].score:
-        # Si 2 membres on le même nombre alors 3 est compris dedans aussi
+        # Si 2 membres on le même nombre alors 3 membres sont aussi compris dedans aussi
         gagnant = None
         print(f"\n🏆 Égalité {joueurs_tries[0].score} points ! 🏆")
     else:

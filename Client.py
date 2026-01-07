@@ -3,10 +3,6 @@ import json
 import sys
 import os
 import platform
-import time
-
-# Ensure we can import from current directory
-sys.path.append('.')
 
 import readchar
 from readchar import key
@@ -15,12 +11,37 @@ from piece import Piece
 from plateau import Plateau
 
 def clear_screen():
+    """
+    Efface le contenu du terminal
+    :return:
+    """
     if platform.system() == "Windows":
         os.system('cls')
     else:
         os.system('clear')
 
+def get_piece_lines(index, piece_data, emoji):
+    """Génère les lignes de texte pour afficher une pièce (nom + forme)"""
+    shape_lines = []
+    for row in piece_data["forme"]:
+        line = "".join([emoji + " " if cell else "  " for cell in row])
+        shape_lines.append(line)
+    
+    header = f"{index}: {piece_data['nom']}"
+    lines = []
+    
+    if shape_lines:
+        lines.append(f"{header:<14} {shape_lines[0]}")
+        for sl in shape_lines[1:]:
+            lines.append(f"{' ' * 14} {sl}")
+    else:
+        lines.append(header)
+    return lines
+
 class BlokusClient:
+    """
+    Class Blokus Client
+    """
     def __init__(self, host='127.0.0.1', port=8888):
         self.host = host
         self.port = port
@@ -33,6 +54,10 @@ class BlokusClient:
         self.running = True
 
     async def connect(self):
+        """
+        Établit une connexion au serveur
+        :return:
+        """
         try:
             self.reader, self.writer = await asyncio.open_connection(self.host, self.port)
         except Exception as e:
@@ -41,10 +66,19 @@ class BlokusClient:
         return True
 
     async def send(self, message):
+        """
+        Envoie un message au serveur
+        :param message:
+        :return:
+        """
         self.writer.write((json.dumps(message) + "\n").encode())
         await self.writer.drain()
 
     async def receive_loop(self):
+        """
+        Réception des messages du serveur en boucle
+        :return:
+        """
         while self.running:
             try:
                 data = await self.reader.readline()
@@ -61,6 +95,11 @@ class BlokusClient:
                 break
 
     async def handle_message(self, msg):
+        """
+        Gère les messages reçus du serveur
+        :param msg:
+        :return:
+        """
         mtype = msg.get("type")
         
         if mtype == "welcome":
@@ -101,6 +140,13 @@ class BlokusClient:
             self.running = False
 
     def render_interface(self, piece_en_cours=None, position=None, message=""):
+        """
+        Affiche l'interface du client
+        :param piece_en_cours:
+        :param position:
+        :param message:
+        :return: l'interface de la partie
+        """
         if not self.game_state: return
         
         clear_screen()
@@ -150,17 +196,38 @@ class BlokusClient:
         target_player_idx = self.my_idx
         target_player = joueurs_data[target_player_idx]
         
-        pieces_lines = [f"Vos pièces ({target_player['nom']}) :"]
-        pieces_lines.append("")
-        
-        pieces = target_player["pieces"]
-        for i in range(0, len(pieces), 2):
-            p1 = pieces[i]
-            line_content = f"{i}: {p1['nom']}"
-            if i + 1 < len(pieces):
-                p2 = pieces[i+1]
-                line_content = f"{line_content:<20} {i+1}: {p2['nom']}"
-            pieces_lines.append(f"{' ' * 5} {line_content}")
+        pieces_lines = [f"Vos pièces ({target_player['nom']}) :", ""]
+
+        # Configuration de l'affichage en colonnes
+        cols = 5  # Nombre de colonnes de pièces
+        col_width = 20  # Largeur d'une colonne
+
+        shape_piece = target_player['emoji']
+
+        for i in range(0, len(target_player["pieces"]), cols):
+            batch = []
+            for j in range(cols):
+                if i + j < len(target_player["pieces"]):
+                    batch.append((i + j, target_player["pieces"][i + j]))
+
+            batch_lines = [get_piece_lines(idx, p, shape_piece) for idx, p in batch]
+
+            if not batch_lines:
+                continue
+
+            max_h = max(len(lines) for lines in batch_lines)
+
+            # Harmonisation de la hauteur
+            for lines in batch_lines:
+                lines += [""] * (max_h - len(lines))
+
+            # Construction des lignes
+            for r in range(max_h):
+                row_str = " " * 3
+                for lines in batch_lines:
+                    row_str += f"{lines[r]:<{col_width}}"
+                pieces_lines.append(row_str)  # end of line
+            pieces_lines.append("")
 
         # Side by side
         max_lines = max(len(board_lines), len(pieces_lines))
@@ -176,6 +243,10 @@ class BlokusClient:
         print("="*40)
 
     async def input_loop(self):
+        """
+        Réception des entrées du client en boucle
+        :return:
+        """
         print("Attente du démarrage... (Si vous êtes Joueur 1, tapez 's' pour lancer)")
         
         while self.running:
@@ -190,6 +261,10 @@ class BlokusClient:
                     await asyncio.sleep(0.5)
 
     async def play_turn(self):
+        """
+        Affiche l'interface et récupère la saisie de pièce du joueur
+        :return:
+        """
         self.render_interface(message="C'est à votre tour ! Choisissez une pièce (numéro)")
         
         try:
@@ -197,6 +272,7 @@ class BlokusClient:
             s = await asyncio.to_thread(input, "> ")
             if not s.strip(): return
             
+            # Vérification de la saisie
             try:
                 piece_idx = int(s)
             except ValueError:
@@ -210,6 +286,7 @@ class BlokusClient:
                 await asyncio.sleep(1)
                 return
 
+            # Création de l'objet Piece
             p_data = my_pieces[piece_idx]
             piece_obj = Piece(p_data["forme"], p_data["nom"])
             
@@ -219,6 +296,7 @@ class BlokusClient:
             confirmed = False
             msg = ""
             
+            # Boucle afin de confirmer le placement de la pièce du joueur
             while not confirmed:
                 self.render_interface(piece_en_cours=piece_obj, position=(x, y), message=msg or "ZQSD: Bouger | R: Rotation | M: Miroir | Entrée: Valider | C: Annuler")
                 msg = ""
