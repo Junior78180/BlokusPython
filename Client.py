@@ -58,6 +58,7 @@ class BlokusClient:
         Établit une connexion au serveur
         :return:
         """
+        print(f"Tentative de connexion à {self.host}:{self.port}...")
         try:
             self.reader, self.writer = await asyncio.open_connection(self.host, self.port)
         except Exception as e:
@@ -333,7 +334,13 @@ class BlokusClient:
             print(f"Erreur tour: {e}")
 
 async def main():
-    client = BlokusClient()
+    # Demande de l'IP au démarrage
+    print("=== BLOKUS CLIENT ===")
+    target_ip = input("Entrez l'IP du serveur (laisser vide pour localhost) : ").strip()
+    if not target_ip:
+        target_ip = '127.0.0.1'
+        
+    client = BlokusClient(host=target_ip)
     if await client.connect():
         await asyncio.gather(
             client.receive_loop(),

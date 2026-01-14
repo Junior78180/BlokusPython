@@ -46,7 +46,8 @@ class BlokusServer:
     """
     Class Blokus Server
     """
-    def __init__(self, host='127.0.0.1', port=8888):
+    def __init__(self, host='0.0.0.0', port=8888):
+        # 0.0.0.0 permet d'écouter toutes les interfaces réseau (WiFi, Ethernet, Localhost)
         self.host = host
         self.port = port
         self.clients = {} # writer -> player_index
@@ -81,6 +82,7 @@ class BlokusServer:
         """
         clear_screen()
         print("=== SERVEUR BLOKUS - PARTIE EN COURS ===")
+        print(f"IP du serveur : {self.host} (Port: {self.port})")
         
         # Scores
         scores_str = " | ".join([f"{j.nom}: {j.score}pts" for j in self.joueurs])
@@ -339,6 +341,7 @@ class BlokusServer:
         """
         server = await asyncio.start_server(self.handle_client, self.host, self.port)
         self.log(f"Serveur démarré sur {self.host}:{self.port}")
+        print(f"En attente de connexions sur le port {self.port}...")
         async with server:
             await server.serve_forever()
 
